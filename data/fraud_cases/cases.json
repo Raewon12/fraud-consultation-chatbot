@@ -1,0 +1,103 @@
+[
+  {
+    "case_id": "case_01_monitor_office",
+    "year": 2025,
+    "platform": "중고거래 앱",
+    "item": "사무실용 컴퓨터 모니터",
+    "amount_krw": 400000,
+    "fraud_type": "비대면 직거래·절도 오인",
+    "seller_method": "사무실 비밀번호를 알려주며 비대면 수령을 유도하고, 입금 후 잠적. 실제 사무실과 무관한 공간을 악용해 피해자가 절도범 오해까지 받음.",
+    "tags": ["선입금", "비대면", "타인공간악용"]
+  },
+  {
+    "case_id": "case_02_doorknob_phone",
+    "year": 2025,
+    "platform": "중고거래 앱",
+    "item": "고가 스마트폰",
+    "amount_krw": 4950000,
+    "fraud_type": "문고리 거래·미배송",
+    "seller_method": "입금하면 문고리에 걸어두겠다며 비대면 거래를 유도하고, 돈만 받고 물건은 두지 않은 채 잠적.",
+    "tags": ["선입금", "비대면", "문고리거래"]
+  },
+  {
+    "case_id": "case_03_camera_community",
+    "year": 2025,
+    "platform": "카메라 커뮤니티",
+    "item": "카메라 및 렌즈 장비",
+    "amount_krw": 30000000,
+    "fraud_type": "지속적 선입금 후 미배송",
+    "seller_method": "마니아 커뮤니티에서 시세보다 조금 싸게 반복 판매글을 올려 선입금을 받은 뒤, 물건을 보내지 않고 잠적. 피해자 70명 이상.",
+    "tags": ["선입금", "반복사기", "고가장비"]
+  },
+  {
+    "case_id": "case_04_japan_ticket_watch",
+    "year": 2024,
+    "platform": "중고거래 사이트 및 SNS",
+    "item": "콘서트 티켓 및 애플워치",
+    "amount_krw": 200000000,
+    "fraud_type": "대규모 허위 판매·해외 도피",
+    "seller_method": "유명 콘서트 티켓·전자기기 허위 판매글을 여러 플랫폼에 올려 선입금만 받고 미배송. 이후 해외로 도피.",
+    "tags": ["선입금", "허위매물", "해외도피", "대규모피해"]
+  },
+  {
+    "case_id": "case_05_concert_115people",
+    "year": 2020,
+    "platform": "중고거래 사이트",
+    "item": "콘서트 티켓 및 굿즈",
+    "amount_krw": 18000000,
+    "fraud_type": "장기간 허위 티켓 판매",
+    "seller_method": "약 8개월간 콘서트 티켓·굿즈 판매글을 반복 게시하며 선입금만 받고 잠적. 피해자 115명.",
+    "tags": ["선입금", "허위매물", "반복사기"]
+  },
+  {
+    "case_id": "case_06_real_estate_deposit",
+    "year": 2024,
+    "platform": "중고거래 앱(부동산 직거래)",
+    "item": "전·월세 가계약",
+    "amount_krw": 179000000,
+    "fraud_type": "부동산 가계약금 편취",
+    "seller_method": "중개수수료를 아끼자며 직거래를 유도하고, 등기부등본·사진으로 신뢰를 만든 뒤 가계약금만 받고 잠적.",
+    "tags": ["가계약금", "부동산", "직거래유도"]
+  },
+  {
+    "case_id": "case_07_lv_jacket_440",
+    "year": 2025,
+    "platform": "중고나라 + 번개장터 감정",
+    "item": "루이비통 바시티 자켓",
+    "amount_krw": 4400000,
+    "fraud_type": "명품 가품 판매",
+    "seller_method": "정품이라 주장하며 고가로 판매. 이후 감정 결과 가품 판정되었으나 판매자는 계속 정품 주장하며 환불 거부.",
+    "tags": ["가품", "명품", "환불거부"]
+  },
+  {
+    "case_id": "case_08_chanel_460",
+    "year": 2022,
+    "platform": "당근마켓",
+    "item": "샤넬 가방",
+    "amount_krw": 4600000,
+    "fraud_type": "명품 가품 판매",
+    "seller_method": "보증서·영수증까지 제시하며 정품이라 속이고 판매. 이후 감정 결과 가품 판정, 동일 판매자 피해자 다수 확인.",
+    "tags": ["가품", "명품", "반복피해"]
+  },
+  {
+    "case_id": "case_09_chanel_vintage_65",
+    "year": 2023,
+    "platform": "번개장터",
+    "item": "샤넬 빈티지 백",
+    "amount_krw": 650000,
+    "fraud_type": "가품 판매",
+    "seller_method": "정품이라고 강조하며 판매. 이후 감정 결과 가품 판정되자 판매자가 리메이크라며 변명하며 환불 거부.",
+    "tags": ["가품", "명품", "환불거부"]
+  },
+  {
+    "case_id": "case_10_chanel_1000_cash",
+    "year": 2023,
+    "platform": "개인 지인 거래",
+    "item": "샤넬 가방",
+    "amount_krw": 10000000,
+    "fraud_type": "지인 거래 가품·현금 거래",
+    "seller_method": "면세점 정품이라고 속이고 현금 거래로 1,000만 원 수령. 이후 가품 판정되었으나 계좌 기록 부재로 입증 어려움.",
+    "tags": ["가품", "명품", "현금거래", "지인거래"]
+  }
+]
+

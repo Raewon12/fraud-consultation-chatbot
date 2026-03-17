@@ -1,0 +1,23 @@
+# 가상환경
+.vscode
+.venv
+# 환경변수
+.env
+# 파이썬
+*.__pycache__
+*.db
+*.splite3
+# Conda environment files
+.conda/
+envs/
+*.egg-info/
+.ipynb_checkpoints/
+__pycache__/
+.DS_Store
+
+test
+chroma_startup_all
+chunked_documents.pkl
+# Chroma DB
+chroma_db/
+test_chroma_db/
