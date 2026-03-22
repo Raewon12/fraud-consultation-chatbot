@@ -746,7 +746,47 @@ def load_template_documents(path: str):
     return docs
 
 # =====================================================
-# 5. 전체 데이터 로딩 및 처리 파이프라인
+# 6. AI Hub 법률 서식 데이터 로딩
+# =====================================================
+def load_aihub_legal_documents(path: str):
+    """전처리된 AI Hub 법률 서식 JSON을 로드하여 Document 객체로 변환
+    - 1000자 이하: 문서 1건 = 1 Document
+    - 1000자 초과: RecursiveCharacterTextSplitter로 분할
+    """
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    docs = []
+    for entry in data:
+        text = entry['text']
+        doc_type = entry['doc_type']
+        category = entry['category']
+        doc_id = entry['id']
+
+        base_metadata = {
+            "source": "aihub_legal",
+            "document_type": f"aihub_{doc_type}",
+            "doc_id": doc_id,
+            "category": category,
+        }
+
+        if len(text) > 1000:
+            chunks = text_splitter.split_text(text)
+            for i, chunk in enumerate(chunks):
+                metadata = {
+                    **base_metadata,
+                    "chunk_number": i + 1,
+                    "total_chunks": len(chunks),
+                }
+                docs.append(Document(page_content=chunk, metadata=metadata))
+        else:
+            docs.append(Document(page_content=text, metadata=base_metadata))
+
+    return docs
+
+
+# =====================================================
+# 7. 전체 데이터 로딩 및 처리 파이프라인
 # =====================================================
 def load_all_documents(data_dir: str = "data"):
     """모든 데이터를 로드하여 Document 객체 리스트로 반환"""
@@ -794,7 +834,13 @@ def load_all_documents(data_dir: str = "data"):
                 template_path = os.path.join(templates_dir, filename)
                 print(f"템플릿 로딩: {template_path}")
                 all_docs.extend(load_template_documents(template_path))
-    
+
+    # 6. AI Hub 법률 서식 데이터 로딩
+    aihub_path = os.path.join(data_dir, "aihub_legal_processed.json")
+    if os.path.exists(aihub_path):
+        print(f"AI Hub 법률 서식 로딩: {aihub_path}")
+        all_docs.extend(load_aihub_legal_documents(aihub_path))
+
     print(f"\n총 {len(all_docs)}개의 문서 청크가 생성되었습니다!")
     return all_docs
 

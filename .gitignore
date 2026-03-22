@@ -21,3 +21,8 @@ chunked_documents.pkl
 # Chroma DB
 chroma_db/
 test_chroma_db/
+# AI Hub 원본 데이터
+aihub_raw/
+data/aihub_legal/
+*.zip.part0
+06.계약_외_법률_문서_서식_데이터*/

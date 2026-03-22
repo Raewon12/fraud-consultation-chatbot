@@ -8,6 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.messages import HumanMessage, AIMessage
+from sentence_transformers import CrossEncoder
 
 warnings.filterwarnings("ignore")
 load_dotenv()
@@ -19,7 +20,7 @@ if not api_key:
 # =====================================================
 # 1단계: 벡터 저장소 로드
 # =====================================================
-def load_vectorstore(persist_directory: str = "test_chroma_db"):
+def load_vectorstore(persist_directory: str = "chroma_db"):
     """
     기존에 생성된 벡터 저장소를 로드합니다.
     
@@ -49,26 +50,46 @@ def load_vectorstore(persist_directory: str = "test_chroma_db"):
 # =====================================================
 # 2단계: 검색기(Retriever) 설정  
 # =====================================================
-def setup_retriever(vectorstore, k: int = 5):
+def setup_retriever(vectorstore, k: int = 5, fetch_k: int = 15):
     """
     벡터 저장소로부터 검색기를 설정합니다.
-    
-    Args:
-        vectorstore: Chroma 벡터 저장소
-        k: 검색할 문서 개수
-        
-    Returns:
-        VectorStoreRetriever: 설정된 검색기
+    넓게 fetch_k개를 가져온 후 reranking으로 k개를 선별합니다.
     """
-    print(f"검색기 설정 중 (검색 문서 개수: {k}개)")
-    
+    print(f"검색기 설정 중 (초기 검색: {fetch_k}개 → reranking 후: {k}개)")
+
     retriever = vectorstore.as_retriever(
-        search_type="similarity",  # 유사도 검색
-        search_kwargs={"k": k}     # 상위 k개 문서 검색
+        search_type="similarity",
+        search_kwargs={"k": fetch_k}  # 넓게 가져옴
     )
-    
+
     print("✅ 검색기 설정 완료!")
     return retriever
+
+
+def setup_reranker(model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+    """Cross-Encoder reranker를 초기화합니다."""
+    print(f"Reranker 초기화 중: {model_name}")
+    reranker = CrossEncoder(model_name)
+    print("✅ Reranker 초기화 완료!")
+    return reranker
+
+
+def rerank_documents(reranker, query: str, docs, top_k: int = 5):
+    """검색된 문서들을 cross-encoder로 reranking하여 상위 top_k개를 반환합니다."""
+    if not docs:
+        return docs
+
+    # (query, document) 쌍 생성
+    pairs = [(query, doc.page_content) for doc in docs]
+
+    # cross-encoder로 relevance score 계산
+    scores = reranker.predict(pairs)
+
+    # score 기준 정렬 후 상위 top_k개 선택
+    scored_docs = sorted(zip(scores, docs), key=lambda x: x[0], reverse=True)
+    reranked = [doc for _, doc in scored_docs[:top_k]]
+
+    return reranked
 
 # =====================================================
 # 3단계: 프롬프트 템플릿 작성
@@ -148,18 +169,23 @@ def create_llm():
 class FraudRAGAssistant:
     """중고거래 사기 상담 RAG 어시스턴트 (멀티턴 대화 지원)"""
 
-    def __init__(self, vectorstore_path: str = "test_chroma_db", max_history: int = 10):
+    def __init__(self, vectorstore_path: str = "chroma_db", max_history: int = 10,
+                 final_k: int = 5, fetch_k: int = 15):
         """
         RAG 어시스턴트 초기화
 
         Args:
             vectorstore_path: 벡터 저장소 경로
             max_history: 기억할 최대 대화 턴 수
+            final_k: reranking 후 최종 사용할 문서 수
+            fetch_k: 초기 벡터 검색에서 가져올 문서 수
         """
         print("=== 중고거래 사기 상담 RAG 시스템 초기화 ===")
 
         self.vectorstore = load_vectorstore(vectorstore_path)
-        self.retriever = setup_retriever(self.vectorstore, k=5)
+        self.retriever = setup_retriever(self.vectorstore, k=final_k, fetch_k=fetch_k)
+        self.reranker = setup_reranker()
+        self.final_k = final_k
         self.prompt = create_prompt_template()
         self.llm = create_llm()
         self.chain = self.prompt | self.llm | StrOutputParser()
@@ -223,8 +249,9 @@ class FraudRAGAssistant:
             # 1. 대화 맥락 반영하여 검색 쿼리 생성
             search_query = self._build_search_query(question)
 
-            # 2. 관련 문서 검색
+            # 2. 관련 문서 검색 (넓게) → reranking (정밀하게)
             docs = self.retriever.invoke(search_query)
+            docs = rerank_documents(self.reranker, search_query, docs, top_k=self.final_k)
             context = format_docs(docs)
 
             # 3. 대화 기록 + 컨텍스트로 답변 생성
