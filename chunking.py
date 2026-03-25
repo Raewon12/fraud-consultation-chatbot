@@ -22,12 +22,23 @@ api_key = os.getenv('OPENAI_API_KEY')
 if not api_key:
     raise ValueError('.env확인, key없음')
 
-text_splitter = RecursiveCharacterTextSplitter(  
+text_splitter = RecursiveCharacterTextSplitter(
     chunk_size = 600,
     chunk_overlap = 100,
     length_function = len,
-   
+
 )
+
+# 서식작성용 문서 타입 (AI Hub 데이터)
+FORM_WRITING_TYPES = {
+    "aihub_형사고소장", "aihub_내용증명", "aihub_민사소장",
+    "aihub_신청서", "aihub_형사고발장", "aihub_진정서",
+}
+
+def is_form_writing_doc(doc) -> bool:
+    """AI Hub 서식 문서인지 판별"""
+    return doc.metadata.get("document_type", "") in FORM_WRITING_TYPES
+
 # =====================================================
 # 1. 사기 사례 문서 로딩 (이미 구현됨)
 # =====================================================
@@ -885,32 +896,41 @@ def load_vector_store(persist_directory: str = "chroma_db"):
     return vectorstore
 
 def main():
-    """메인 실행 함수"""
+    """메인 실행 함수 — 상담용/서식작성용 벡터 저장소 2개 생성"""
     try:
         # 모든 문서 로딩
         documents = load_all_documents()
-        
+
+        # 상담용 / 서식작성용 분리
+        counseling_docs = [d for d in documents if not is_form_writing_doc(d)]
+        form_docs = [d for d in documents if is_form_writing_doc(d)]
+
+        print(f"\n상담용 문서: {len(counseling_docs)}개")
+        print(f"서식작성용 문서: {len(form_docs)}개")
+
         # 문서 타입별 통계
-        doc_types = {}
-        for doc in documents:
-            doc_type = doc.metadata.get('document_type', 'unknown')
-            doc_types[doc_type] = doc_types.get(doc_type, 0) + 1
-        
-        print("\n문서 타입별 통계:")
-        for doc_type, count in doc_types.items():
-            print(f"  - {doc_type}: {count}개")
-        
-        # 벡터 저장소 생성
-        vectorstore = create_vector_store(documents)
-        
+        for label, docs in [("상담용", counseling_docs), ("서식작성용", form_docs)]:
+            doc_types = {}
+            for doc in docs:
+                doc_type = doc.metadata.get('document_type', 'unknown')
+                doc_types[doc_type] = doc_types.get(doc_type, 0) + 1
+            print(f"\n[{label}] 문서 타입별 통계:")
+            for doc_type, count in sorted(doc_types.items(), key=lambda x: -x[1]):
+                print(f"  - {doc_type}: {count}개")
+
+        # 벡터 저장소 2개 생성
+        vs_counseling = create_vector_store(counseling_docs, "chroma_db_counseling")
+        vs_form = create_vector_store(form_docs, "chroma_db_form")
+
         print("\n청킹 및 벡터화 완료!")
-        print("이제 RAG 시스템에서 사용할 수 있습니다.")
-        
-        return vectorstore, documents
-        
+        print("상담용: chroma_db_counseling/")
+        print("서식작성용: chroma_db_form/")
+
+        return vs_counseling, vs_form
+
     except Exception as e:
         print(f"오류 발생: {e}")
         return None, None
 
 if __name__ == "__main__":
-    vectorstore, documents = main()        
+    main()        

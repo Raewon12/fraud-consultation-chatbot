@@ -14,6 +14,22 @@ warnings.filterwarnings("ignore")
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
+
+# =====================================================
+# 의도 분류 (상담 vs 서식작성)
+# =====================================================
+def classify_intent(question: str) -> str:
+    """사용자 질문의 의도를 분류: 'form_writing' or 'counseling'"""
+    q = question.lower()
+    form_types = ["고소장", "고발장", "내용증명", "소장", "신청서", "진정서"]
+    action_words = ["작성", "써줘", "써 줘", "만들어", "양식", "서식", "초안", "draft"]
+
+    has_form_type = any(kw in q for kw in form_types)
+    has_action = any(kw in q for kw in action_words)
+
+    if has_form_type and has_action:
+        return "form_writing"
+    return "counseling"
 if not api_key:
     raise ValueError("OPENAI_API_KEY 없음! .env 확인해줘")
 
@@ -129,6 +145,7 @@ def create_prompt_template():
 5. 컨텍스트에 없는 내용은 "제공된 정보로는 확인이 어렵습니다"라고 하세요
 6. 이전 대화에서 언급된 내용을 참고하여 일관성 있게 답변하세요
 7. 반드시 컨텍스트에 있는 정보만 사용하세요. 컨텍스트에 없는 법률, 절차, 비용을 추측하여 답변하지 마세요.
+8. 계좌 지급정지는 중고거래 사기에서 실효성이 매우 낮습니다 (의무 대상 아님, 성공률 5~10%). 적극 추천하지 말고, 사용자가 직접 물어볼 때만 현실적 기대치와 함께 안내하세요.
 
 **참고 컨텍스트:**
 {context}"""),
@@ -137,6 +154,31 @@ def create_prompt_template():
     ])
 
     print("✅ 프롬프트 템플릿 생성 완료!")
+    return prompt
+
+
+def create_form_writing_prompt():
+    """서식 작성 보조용 프롬프트 템플릿을 생성합니다."""
+    print("서식작성 프롬프트 템플릿 생성 중...")
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """당신은 법률 서식 작성을 도와주는 전문 어시스턴트입니다.
+사용자의 상황을 파악하여, 주어진 서식 데이터를 바탕으로 법률 서식 초안을 작성해 주세요.
+
+**작성 원칙:**
+1. 사용자가 제공한 정보(이름, 날짜, 금액, 사건 경위 등)를 서식에 반영하세요
+2. 아직 제공되지 않은 필수 정보가 있으면 사용자에게 물어보세요
+3. [작성필요] 표시로 빈 칸을 명확히 표시하세요
+4. 컨텍스트의 서식 예시를 참고하되, 사용자 상황에 맞게 조정하세요
+5. 법적 효력에 대한 주의사항을 안내하세요 (예: "이 초안은 참고용이며, 중요한 경우 법률 전문가 검토를 권장합니다")
+
+**참고 서식 데이터:**
+{context}"""),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{question}")
+    ])
+
+    print("✅ 서식작성 프롬프트 템플릿 생성 완료!")
     return prompt
 
 # =====================================================
@@ -169,26 +211,31 @@ def create_llm():
 class FraudRAGAssistant:
     """중고거래 사기 상담 RAG 어시스턴트 (멀티턴 대화 지원)"""
 
-    def __init__(self, vectorstore_path: str = "chroma_db", max_history: int = 10,
-                 final_k: int = 5, fetch_k: int = 15):
+    def __init__(self, counseling_path: str = "chroma_db_counseling",
+                 form_path: str = "chroma_db_form",
+                 max_history: int = 10, final_k: int = 5, fetch_k: int = 15):
         """
-        RAG 어시스턴트 초기화
-
-        Args:
-            vectorstore_path: 벡터 저장소 경로
-            max_history: 기억할 최대 대화 턴 수
-            final_k: reranking 후 최종 사용할 문서 수
-            fetch_k: 초기 벡터 검색에서 가져올 문서 수
+        RAG 어시스턴트 초기화 (상담용 + 서식작성용 이중 벡터 저장소)
         """
         print("=== 중고거래 사기 상담 RAG 시스템 초기화 ===")
 
-        self.vectorstore = load_vectorstore(vectorstore_path)
-        self.retriever = setup_retriever(self.vectorstore, k=final_k, fetch_k=fetch_k)
+        # 상담용 벡터 저장소
+        self.counseling_store = load_vectorstore(counseling_path)
+        self.counseling_retriever = setup_retriever(self.counseling_store, k=final_k, fetch_k=fetch_k)
+
+        # 서식작성용 벡터 저장소
+        self.form_store = load_vectorstore(form_path)
+        self.form_retriever = setup_retriever(self.form_store, k=final_k, fetch_k=fetch_k)
+
         self.reranker = setup_reranker()
         self.final_k = final_k
-        self.prompt = create_prompt_template()
+
+        # 두 가지 프롬프트/체인
+        self.counseling_prompt = create_prompt_template()
+        self.form_prompt = create_form_writing_prompt()
         self.llm = create_llm()
-        self.chain = self.prompt | self.llm | StrOutputParser()
+        self.counseling_chain = self.counseling_prompt | self.llm | StrOutputParser()
+        self.form_chain = self.form_prompt | self.llm | StrOutputParser()
 
         # 대화 기록 저장
         self.chat_history = []
@@ -234,38 +281,42 @@ class FraudRAGAssistant:
 
     def ask(self, question: str) -> str:
         """
-        질문에 대한 답변을 생성합니다. (대화 기록 반영)
-
-        Args:
-            question: 사용자 질문
-
-        Returns:
-            str: AI 생성 답변
+        질문에 대한 답변을 생성합니다. (의도 분류 → 라우팅 → 답변)
         """
         print(f"💬 질문: {question}")
-        print("🔍 관련 문서 검색 및 답변 생성 중...")
 
         try:
-            # 1. 대화 맥락 반영하여 검색 쿼리 생성
+            # 1. 의도 분류
+            intent = classify_intent(question)
+            print(f"📌 의도 분류: {intent}")
+
+            # 2. 의도에 따라 retriever/chain 선택
+            if intent == "form_writing":
+                retriever = self.form_retriever
+                chain = self.form_chain
+            else:
+                retriever = self.counseling_retriever
+                chain = self.counseling_chain
+
+            # 3. 대화 맥락 반영하여 검색 쿼리 생성
             search_query = self._build_search_query(question)
 
-            # 2. 관련 문서 검색 (넓게) → reranking (정밀하게)
-            docs = self.retriever.invoke(search_query)
+            # 4. 관련 문서 검색 (넓게) → reranking (정밀하게)
+            docs = retriever.invoke(search_query)
             docs = rerank_documents(self.reranker, search_query, docs, top_k=self.final_k)
             context = format_docs(docs)
 
-            # 3. 대화 기록 + 컨텍스트로 답변 생성
-            answer = self.chain.invoke({
+            # 5. 대화 기록 + 컨텍스트로 답변 생성
+            answer = chain.invoke({
                 "context": context,
                 "chat_history": self.chat_history,
                 "question": question
             })
 
-            # 4. 대화 기록에 추가
+            # 6. 대화 기록에 추가
             self.chat_history.append(HumanMessage(content=question))
             self.chat_history.append(AIMessage(content=answer))
 
-            # 최대 기록 수 초과 시 오래된 것부터 삭제
             if len(self.chat_history) > self.max_history * 2:
                 self.chat_history = self.chat_history[-self.max_history * 2:]
 
@@ -282,10 +333,14 @@ class FraudRAGAssistant:
         self.chat_history = []
         print("🗑️ 대화 기록이 초기화되었습니다.")
 
-    def search_documents(self, query: str, k: int = 3):
+    def search_documents(self, query: str, k: int = 3, intent: str = None):
         """질문과 관련된 문서들을 검색합니다. (디버깅/확인용)"""
-        print(f"🔍 문서 검색: {query}")
-        docs = self.retriever.invoke(query)
+        if intent is None:
+            intent = classify_intent(query)
+        retriever = self.form_retriever if intent == "form_writing" else self.counseling_retriever
+
+        print(f"🔍 문서 검색 ({intent}): {query}")
+        docs = retriever.invoke(query)
 
         print(f"📄 검색된 문서 {len(docs)}개:")
         for i, doc in enumerate(docs, 1):
