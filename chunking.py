@@ -29,15 +29,6 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 )
 
-# 서식작성용 문서 타입 (AI Hub 데이터)
-FORM_WRITING_TYPES = {
-    "aihub_형사고소장", "aihub_내용증명", "aihub_민사소장",
-    "aihub_신청서", "aihub_형사고발장", "aihub_진정서",
-}
-
-def is_form_writing_doc(doc) -> bool:
-    """AI Hub 서식 문서인지 판별"""
-    return doc.metadata.get("document_type", "") in FORM_WRITING_TYPES
 
 # =====================================================
 # 1. 사기 사례 문서 로딩 (이미 구현됨)
@@ -757,47 +748,7 @@ def load_template_documents(path: str):
     return docs
 
 # =====================================================
-# 6. AI Hub 법률 서식 데이터 로딩
-# =====================================================
-def load_aihub_legal_documents(path: str):
-    """전처리된 AI Hub 법률 서식 JSON을 로드하여 Document 객체로 변환
-    - 1000자 이하: 문서 1건 = 1 Document
-    - 1000자 초과: RecursiveCharacterTextSplitter로 분할
-    """
-    with open(path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-
-    docs = []
-    for entry in data:
-        text = entry['text']
-        doc_type = entry['doc_type']
-        category = entry['category']
-        doc_id = entry['id']
-
-        base_metadata = {
-            "source": "aihub_legal",
-            "document_type": f"aihub_{doc_type}",
-            "doc_id": doc_id,
-            "category": category,
-        }
-
-        if len(text) > 1000:
-            chunks = text_splitter.split_text(text)
-            for i, chunk in enumerate(chunks):
-                metadata = {
-                    **base_metadata,
-                    "chunk_number": i + 1,
-                    "total_chunks": len(chunks),
-                }
-                docs.append(Document(page_content=chunk, metadata=metadata))
-        else:
-            docs.append(Document(page_content=text, metadata=base_metadata))
-
-    return docs
-
-
-# =====================================================
-# 7. 전체 데이터 로딩 및 처리 파이프라인
+# 6. 전체 데이터 로딩 및 처리 파이프라인
 # =====================================================
 def load_all_documents(data_dir: str = "data"):
     """모든 데이터를 로드하여 Document 객체 리스트로 반환"""
@@ -846,12 +797,6 @@ def load_all_documents(data_dir: str = "data"):
                 print(f"템플릿 로딩: {template_path}")
                 all_docs.extend(load_template_documents(template_path))
 
-    # 6. AI Hub 법률 서식 데이터 로딩
-    aihub_path = os.path.join(data_dir, "aihub_legal_processed.json")
-    if os.path.exists(aihub_path):
-        print(f"AI Hub 법률 서식 로딩: {aihub_path}")
-        all_docs.extend(load_aihub_legal_documents(aihub_path))
-
     print(f"\n총 {len(all_docs)}개의 문서 청크가 생성되었습니다!")
     return all_docs
 
@@ -896,41 +841,33 @@ def load_vector_store(persist_directory: str = "chroma_db"):
     return vectorstore
 
 def main():
-    """메인 실행 함수 — 상담용/서식작성용 벡터 저장소 2개 생성"""
+    """메인 실행 함수 — 상담용 벡터 저장소 생성"""
     try:
         # 모든 문서 로딩
         documents = load_all_documents()
 
-        # 상담용 / 서식작성용 분리
-        counseling_docs = [d for d in documents if not is_form_writing_doc(d)]
-        form_docs = [d for d in documents if is_form_writing_doc(d)]
-
-        print(f"\n상담용 문서: {len(counseling_docs)}개")
-        print(f"서식작성용 문서: {len(form_docs)}개")
+        print(f"\n상담용 문서: {len(documents)}개")
 
         # 문서 타입별 통계
-        for label, docs in [("상담용", counseling_docs), ("서식작성용", form_docs)]:
-            doc_types = {}
-            for doc in docs:
-                doc_type = doc.metadata.get('document_type', 'unknown')
-                doc_types[doc_type] = doc_types.get(doc_type, 0) + 1
-            print(f"\n[{label}] 문서 타입별 통계:")
-            for doc_type, count in sorted(doc_types.items(), key=lambda x: -x[1]):
-                print(f"  - {doc_type}: {count}개")
+        doc_types = {}
+        for doc in documents:
+            doc_type = doc.metadata.get('document_type', 'unknown')
+            doc_types[doc_type] = doc_types.get(doc_type, 0) + 1
+        print("\n문서 타입별 통계:")
+        for doc_type, count in sorted(doc_types.items(), key=lambda x: -x[1]):
+            print(f"  - {doc_type}: {count}개")
 
-        # 벡터 저장소 2개 생성
-        vs_counseling = create_vector_store(counseling_docs, "chroma_db_counseling")
-        vs_form = create_vector_store(form_docs, "chroma_db_form")
+        # 벡터 저장소 생성 (상담용만)
+        vs = create_vector_store(documents, "chroma_db_counseling")
 
         print("\n청킹 및 벡터화 완료!")
         print("상담용: chroma_db_counseling/")
-        print("서식작성용: chroma_db_form/")
 
-        return vs_counseling, vs_form
+        return vs
 
     except Exception as e:
         print(f"오류 발생: {e}")
-        return None, None
+        return None
 
 if __name__ == "__main__":
     main()        

@@ -1,0 +1,79 @@
+{
+  "template_id": "civil_complaint",
+  "template_name": "민사소장 (사기 피해 손해배상)",
+  "description": "중고거래 사기 피해에 대한 민사소장 - 소액사건 기준",
+  "legal_basis": "민법 제750조 (불법행위 손해배상)",
+
+  "sections": [
+    {
+      "title": "원고 (피해자)",
+      "template_text": "원 고  [원고_성명]\n주민등록번호  [원고_주민등록번호]\n주소  [원고_주소]\n연락처  [원고_연락처]",
+      "fields": [
+        {"field_id": "plaintiff_name", "label": "성명", "placeholder": "[홍길동]", "required": true},
+        {"field_id": "plaintiff_id", "label": "주민등록번호", "placeholder": "[900101-1******]", "required": true},
+        {"field_id": "plaintiff_address", "label": "주소", "placeholder": "[서울시 강남구 OO동 123번지]", "required": true},
+        {"field_id": "plaintiff_phone", "label": "연락처", "placeholder": "[010-1234-5678]", "required": true}
+      ]
+    },
+    {
+      "title": "피고 (사기꾼)",
+      "template_text": "피 고  [피고_성명]\n주소  [피고_주소]\n\n[알고 있는 정보]\n- 계좌번호: [피고_계좌번호]\n- 전화번호: [피고_전화번호]\n- 플랫폼 닉네임: [피고_닉네임]",
+      "fields": [
+        {"field_id": "defendant_name", "label": "성명", "placeholder": "성명불상", "required": false, "note": "모르면 '성명불상' 기재"},
+        {"field_id": "defendant_address", "label": "주소", "placeholder": "불상", "required": false},
+        {"field_id": "defendant_account", "label": "계좌번호", "placeholder": "[카카오뱅크 3333-01-1234567]", "required": true},
+        {"field_id": "defendant_phone", "label": "전화번호", "placeholder": "[010-9876-5432]", "required": false},
+        {"field_id": "defendant_nickname", "label": "플랫폼 닉네임", "placeholder": "[당근마켓 '급처분']", "required": false}
+      ]
+    },
+    {
+      "title": "청구 취지",
+      "template_text": "청 구 취 지\n\n1. 피고는 원고에게 [청구금액]원 및 이에 대하여 [송금일]부터 이 사건 소장 부본 송달일까지는 연 5%의, 그 다음날부터 다 갚는 날까지는 연 12%의 각 비율에 의한 금원을 지급하라.\n2. 소송비용은 피고의 부담으로 한다.\n3. 제1항은 가집행할 수 있다.\n\n라는 판결을 구합니다.",
+      "fields": [
+        {"field_id": "claim_amount", "label": "청구금액", "placeholder": "[800,000]", "required": true},
+        {"field_id": "transfer_date", "label": "송금일", "placeholder": "[2026. 3. 10.]", "required": true}
+      ]
+    },
+    {
+      "title": "청구 원인",
+      "template_text": "청 구 원 인\n\n1. 당사자 관계\n원고는 [원고_주소]에 거주하는 개인이고, 피고는 [거래플랫폼]에서 [거래물품]을 판매한다고 게시한 자입니다.\n\n2. 사건의 경위\n가. [거래일시], 피고는 [거래플랫폼]에 [거래물품]을 [청구금액]원에 판매한다는 글을 게시하였습니다.\n나. 원고는 이를 보고 피고와 거래를 진행하기로 하였고, [송금일] 피고의 계좌([피고_계좌번호])로 [청구금액]원을 송금하였습니다.\n다. [사기확인경위]\n\n3. 피고의 불법행위\n피고는 원고에게 물건을 판매할 의사가 없음에도 불구하고, 허위 거래를 통해 원고로부터 금전을 편취하였습니다. 이는 민법 제750조에 따른 불법행위에 해당하며, 원고는 피고의 불법행위로 인해 [청구금액]원의 손해를 입었습니다.\n\n4. 결론\n따라서 피고는 원고에게 위 금원 및 이에 대한 지연손해금을 지급할 의무가 있으므로 본 소를 제기합니다.",
+      "fields": [
+        {"field_id": "platform", "label": "거래 플랫폼", "placeholder": "[당근마켓]", "required": true},
+        {"field_id": "item", "label": "거래 물품", "placeholder": "[아이폰 15 프로]", "required": true},
+        {"field_id": "trade_date", "label": "거래 시작 일시", "placeholder": "[2026. 3. 10. 14:00경]", "required": true},
+        {"field_id": "fraud_detail", "label": "사기 확인 경위", "placeholder": "[송금 후 연락두절, 판매글 삭제, 물건 미수령 등]", "required": true}
+      ]
+    },
+    {
+      "title": "입증 방법",
+      "template_text": "입 증 방 법\n\n1. 갑 제1호증  거래 대화 캡처\n2. 갑 제2호증  판매글 캡처 (URL 포함)\n3. 갑 제3호증  송금 내역서\n4. 갑 제4호증  피고소인 프로필/연락처 정보\n5. 갑 제5호증  연락 시도 기록 (통화 내역, 메시지 읽음 확인 등)"
+    },
+    {
+      "title": "첨부 서류",
+      "template_text": "첨 부 서 류\n\n1. 위 입증방법 각 1통\n2. 소장 부본 1통\n3. 송달료납부서 1통\n4. 원고 신분증 사본 1통"
+    },
+    {
+      "title": "서명",
+      "template_text": "[작성일]\n\n원고  [원고_성명]  (인)\n\n[관할법원] 귀중",
+      "fields": [
+        {"field_id": "write_date", "label": "작성일", "placeholder": "[2026. 3. 15.]", "required": true},
+        {"field_id": "court", "label": "관할 법원", "placeholder": "[서울중앙지방법원]", "required": true, "note": "피고 주소지, 불법행위지(거래 발생지), 또는 원고 주소지(소액사건) 관할 법원"}
+      ]
+    }
+  ],
+
+  "notes": [
+    "소가 3,000만원 이하: 소액사건심판 적용 (1~2회 변론 종결, 변호사 불필요)",
+    "인지대: 소가 × 0.50% (예: 100만원 소송 → 5,000원, 전자소송 시 10% 할인). 납부 방법: 전자소송은 온라인 결제, 방문 제출은 수입인지 첩부 또는 현금 납부",
+    "송달료: 당사자수 × 5,500원 × 10회분 예납 (미사용분 환급)",
+    "피고를 '성명불상'으로 적되, 계좌번호·전화번호 등 아는 모든 정보 기재",
+    "성명불상 피고는 소장 송달이 불가능하므로, 소장 접수 후 금융거래정보제출명령 또는 사실조회를 통해 피고를 특정한 뒤 '피고 보정서'를 제출해야 합니다",
+    "소장 제출 시 필요 부수: 소장 원본 1부 + 부본 1부 (피고 1명 기준, 총 2부)",
+    "이 초안은 참고용이며, 중요한 경우 법률 전문가 검토를 권장합니다"
+  ],
+
+  "submit_info": {
+    "방법1": "관할법원 민원실 방문 제출 (소장 원본 1부 + 피고별 부본)",
+    "방법2": "전자소송 (https://ecfs.scourt.go.kr, 공동인증서 필요, 24시간 접수)"
+  }
+}

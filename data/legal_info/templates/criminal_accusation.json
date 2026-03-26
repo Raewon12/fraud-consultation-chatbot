@@ -1,0 +1,92 @@
+{
+  "template_id": "criminal_accusation",
+  "template_name": "형사고소장 (사기죄)",
+  "description": "중고거래 사기 피해에 대한 형사고소장 - 등기우편 제출용",
+  "legal_basis": "형법 제347조 제1항 (사기) — 2025.12.23 개정: 20년 이하 징역 또는 5천만원 이하 벌금",
+
+  "sections": [
+    {
+      "title": "고소인 (피해자)",
+      "template_text": "고 소 인\n\n성명: [고소인_성명]\n주민등록번호: [고소인_주민등록번호]\n직업: [고소인_직업]\n주소: [고소인_주소]\n연락처: [고소인_연락처]\n이메일: [고소인_이메일]",
+      "fields": [
+        {"field_id": "accuser_name", "label": "성명", "placeholder": "[홍길동]", "required": true},
+        {"field_id": "accuser_id", "label": "주민등록번호", "placeholder": "[900101-1******]", "required": true},
+        {"field_id": "accuser_job", "label": "직업", "placeholder": "[회사원]", "required": false},
+        {"field_id": "accuser_address", "label": "주소", "placeholder": "[서울시 강남구 OO동 123번지]", "required": true},
+        {"field_id": "accuser_phone", "label": "연락처", "placeholder": "[010-1234-5678]", "required": true},
+        {"field_id": "accuser_email", "label": "이메일", "placeholder": "[hong@example.com]", "required": false}
+      ]
+    },
+    {
+      "title": "피고소인 (사기꾼)",
+      "template_text": "피 고 소 인\n\n성명: 성명불상\n      (아래 정보를 통해 신원 특정 요청)\n\n[알고 있는 정보 모두 기재]\n- 계좌번호: [피고소인_계좌번호]\n- 전화번호: [피고소인_전화번호]\n- 플랫폼 닉네임: [피고소인_닉네임]\n- 플랫폼 프로필 번호: [피고소인_프로필번호]\n- 기타 정보: [피고소인_기타]",
+      "fields": [
+        {"field_id": "accused_account", "label": "계좌번호", "placeholder": "[카카오뱅크 3333-01-1234567]", "required": true},
+        {"field_id": "accused_phone", "label": "전화번호", "placeholder": "[010-9876-5432]", "required": false},
+        {"field_id": "accused_nickname", "label": "플랫폼 닉네임", "placeholder": "[당근마켓 '급처분']", "required": false},
+        {"field_id": "accused_profile", "label": "프로필 번호", "placeholder": "[#12345678]", "required": false}
+      ]
+    },
+    {
+      "title": "고소 취지",
+      "template_text": "고 소 취 지\n\n피고소인을 형법 제347조 제1항 사기죄로 고소하오니,\n철저히 수사하시어 엄벌에 처해 주시기 바랍니다."
+    },
+    {
+      "title": "범죄 사실",
+      "template_text": "범 죄 사 실\n\n1. 거래 시작\n일시: [거래일시]\n장소: [거래플랫폼]\n내용: 고소인은 [거래플랫폼]에서 피고소인이 게시한 [거래물품] 판매글을 발견하였습니다.\n\n판매글 내용:\n- 제목: [판매글_제목]\n- 가격: [거래금액]원\n\n2. 거래 협의\n일시: [협의일시]\n방법: [협의방법]\n내용: 피고소인과 거래 조건을 협의하였으며, 피고소인은 [판매자_주장] 하였습니다.\n\n3. 송금\n일시: [송금일시]\n금액: [거래금액]원\n계좌: [피고소인_계좌번호]\n방법: [송금방법]\n\n고소인은 위 계좌로 물품 대금 명목으로 [거래금액]원을 송금하였습니다.\n\n4. 사기 확인\n일시: [사기확인일시]\n내용:\n[사기확인경위]\n\n5. 피해 발생\n고소인은 피고소인의 기망행위로 인하여 [거래금액]원 상당의 재산상 피해를 입었습니다.\n\n피고소인은 송금 직후 연락을 두절하고 판매글을 삭제한 점, 현재까지 물건을 보내지 않고 연락이 되지 않는 점 등에 비추어, 처음부터 물건을 보낼 의사 없이 고소인을 기망하여 금전을 편취한 것으로 사료됩니다.",
+      "fields": [
+        {"field_id": "platform", "label": "거래 플랫폼", "placeholder": "[당근마켓]", "required": true},
+        {"field_id": "item", "label": "거래 물품", "placeholder": "[아이폰 15 프로]", "required": true},
+        {"field_id": "trade_date", "label": "거래 시작 일시", "placeholder": "[2026. 3. 10. 14:00경]", "required": true},
+        {"field_id": "amount", "label": "거래 금액", "placeholder": "[800,000]", "required": true},
+        {"field_id": "transfer_datetime", "label": "송금 일시", "placeholder": "[2026. 3. 10. 15:30]", "required": true},
+        {"field_id": "transfer_method", "label": "송금 방법", "placeholder": "[카카오뱅크 앱 이체]", "required": true},
+        {"field_id": "fraud_detail", "label": "사기 확인 경위", "placeholder": "[연락두절, 읽씹, 차단, 판매글 삭제, 물건 미수령 등 구체적으로]", "required": true}
+      ]
+    },
+    {
+      "title": "피해 금액",
+      "template_text": "피 해 금 액\n\n총 피해액: [거래금액]원\n\n- 송금 금액: [거래금액]원\n- 송금 일시: [송금일시]\n- 송금 계좌: [피고소인_계좌번호]\n- 송금 방법: [송금방법]"
+    },
+    {
+      "title": "증거 자료",
+      "template_text": "증 거 자 료\n\n증거 제1호: 거래 대화 내용 (채팅 전체 내역)\n증거 제2호: 판매글 캡처 (URL 포함)\n증거 제3호: 송금 내역서\n증거 제4호: 피고소인 프로필/연락처 정보\n증거 제5호: 연락 시도 기록 (통화 내역, 메시지 읽음 확인)\n증거 제6호: 기타 (더치트 조회 결과 등)"
+    },
+    {
+      "title": "관련 법조",
+      "template_text": "관 련 법 조\n\n형법 제347조 제1항 (사기)"
+    },
+    {
+      "title": "확인 사항",
+      "template_text": "확 인 사 항\n\n본 고소장의 내용은 모두 사실이며,\n만약 허위 사실이 있을 경우\n형법 제156조 무고죄로 처벌받을 것을 각오하고\n이에 고소합니다."
+    },
+    {
+      "title": "요청 사항",
+      "template_text": "요 청 사 항\n\n위와 같이 고소하오니,\n\n1. 피고소인의 신원을 특정하여 주시기 바랍니다.\n   (계좌번호 및 전화번호로 실명 확인)\n2. 철저한 수사를 통해 피고소인을 엄벌에 처해 주시기 바랍니다.\n3. 동일한 수법으로 다른 피해자가 있을 수 있으니 여죄 수사를 요청드립니다.\n4. 피고소인이 사용한 플랫폼 및 통신사의 관련 기록이 삭제되지 않도록 보전 조치를 요청드립니다.\n5. 수사 과정에서 확인된 피고소인의 인적사항을 고소인에게 통지하여 주시기 바랍니다."
+    },
+    {
+      "title": "서명",
+      "template_text": "[작성연도]년  [작성월]월  [작성일]일\n\n고소인:  [고소인_성명]  (인)\n\n[관할경찰서]장 귀하",
+      "fields": [
+        {"field_id": "write_date", "label": "작성일", "placeholder": "[2026. 3. 15.]", "required": true},
+        {"field_id": "police_station", "label": "관할 경찰서", "placeholder": "[서울 강남경찰서]", "required": true, "note": "범죄지 또는 피해자 거주지 관할 경찰서"}
+      ]
+    }
+  ],
+
+  "notes": [
+    "감정 표현이나 추측은 쓰지 말 것 — 사실만 육하원칙에 따라 기재",
+    "허위 사실 기재 시 무고죄(형법 제156조) 처벌 가능",
+    "증거는 USB + 출력물 모두 준비하여 제출",
+    "등기우편 + 배달증명 신청 (접수 거부 방지)",
+    "1부 작성하여 발송, 본인 보관용 사본도 준비",
+    "접수 후 경찰서에서 출석 요구가 올 수 있으며, 이는 정상적인 절차",
+    "이 초안은 참고용이며, 중요한 경우 법률 전문가 검토를 권장합니다"
+  ],
+
+  "submit_info": {
+    "방법": "등기우편으로 관할 경찰서 수사과에 발송 (배달증명 필수)",
+    "발송처": "범죄지 또는 피해자 거주지 관할 경찰서 수사과",
+    "별첨": "증거 자료 USB 1개, 증거 출력물, 신분증 사본 1부"
+  }
+}

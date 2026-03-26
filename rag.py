@@ -1,8 +1,10 @@
 import os
+import json
 import warnings
 from dotenv import load_dotenv
 
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from pydantic import SecretStr
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
@@ -13,7 +15,8 @@ from sentence_transformers import CrossEncoder
 warnings.filterwarnings("ignore")
 load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
+_api_key_str = os.getenv("OPENAI_API_KEY")
+api_key = SecretStr(_api_key_str) if _api_key_str else None
 
 # =====================================================
 # 의도 분류 (상담 vs 서식작성)
@@ -21,7 +24,7 @@ api_key = os.getenv("OPENAI_API_KEY")
 def classify_intent(question: str) -> str:
     """사용자 질문의 의도를 분류: 'form_writing' or 'counseling'"""
     q = question.lower()
-    form_types = ["고소장", "고발장", "내용증명", "소장", "신청서", "진정서"]
+    form_types = ["고소장", "고발장", "내용증명", "소장", "신청서", "진정서", "제출명령"]
     action_words = ["작성", "써줘", "써 줘", "만들어", "양식", "서식", "초안", "draft"]
 
     has_form_type = any(kw in q for kw in form_types)
@@ -30,6 +33,24 @@ def classify_intent(question: str) -> str:
     if has_form_type and has_action:
         return "form_writing"
     return "counseling"
+
+
+def classify_form_type(question: str) -> str:
+    """서식 종류를 세분화하여 분류"""
+    q = question.lower()
+    if any(kw in q for kw in ["금융거래정보", "계좌추적", "계좌 조회", "예금주"]):
+        return "financial_info"
+    if any(kw in q for kw in ["사실조회", "신원확인", "전화번호 조회", "통신사 조회"]):
+        return "fact_inquiry"
+    if any(kw in q for kw in ["내용증명", "통고", "최고"]):
+        return "certified_mail"
+    if any(kw in q for kw in ["소장", "민사", "손해배상"]):
+        return "civil"
+    if any(kw in q for kw in ["고소장", "고발장", "형사", "고소"]):
+        return "accusation"
+    return "unknown"
+
+
 if not api_key:
     raise ValueError("OPENAI_API_KEY 없음! .env 확인해줘")
 
@@ -50,7 +71,7 @@ def load_vectorstore(persist_directory: str = "chroma_db"):
     
     # OpenAI 임베딩 초기화 (청킹할 때와 동일한 모델 사용)
     embeddings = OpenAIEmbeddings(
-        openai_api_key=api_key,
+        api_key=api_key,
         model="text-embedding-3-small"
     )
     
@@ -158,21 +179,25 @@ def create_prompt_template():
 
 
 def create_form_writing_prompt():
-    """서식 작성 보조용 프롬프트 템플릿을 생성합니다."""
+    """서식 작성 보조용 프롬프트 템플릿을 생성합니다. (템플릿 기반)"""
     print("서식작성 프롬프트 템플릿 생성 중...")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", """당신은 법률 서식 작성을 도와주는 전문 어시스턴트입니다.
-사용자의 상황을 파악하여, 주어진 서식 데이터를 바탕으로 법률 서식 초안을 작성해 주세요.
+아래 JSON 템플릿의 구조에 따라 법률 서식 초안을 작성해 주세요.
 
 **작성 원칙:**
-1. 사용자가 제공한 정보(이름, 날짜, 금액, 사건 경위 등)를 서식에 반영하세요
-2. 아직 제공되지 않은 필수 정보가 있으면 사용자에게 물어보세요
-3. [작성필요] 표시로 빈 칸을 명확히 표시하세요
-4. 컨텍스트의 서식 예시를 참고하되, 사용자 상황에 맞게 조정하세요
-5. 법적 효력에 대한 주의사항을 안내하세요 (예: "이 초안은 참고용이며, 중요한 경우 법률 전문가 검토를 권장합니다")
+1. 각 section의 template_text를 그대로 사용하되, [placeholder] 부분만 사용자가 제공한 정보로 교체하세요
+2. 사용자가 제공한 날짜, 금액, 이름 등을 절대 임의로 변경하지 마세요
+3. 아직 제공되지 않은 required 필드가 있으면 사용자에게 물어보세요 (서식을 먼저 생성하지 말고 필요한 정보부터 요청)
+4. 모든 정보가 제공되었으면 완성된 서식을 출력하세요
+5. 템플릿의 notes에 있는 안내사항을 서식 끝에 포함하세요
+6. submit_info의 제출 방법도 안내하세요
+7. "이 초안은 참고용이며, 중요한 경우 법률 전문가 검토를 권장합니다" 문구를 반드시 포함하세요
 
-**참고 서식 데이터:**
+**이전 대화에서 사용자가 이미 제공한 정보(이름, 금액, 계좌, 사건 경위 등)가 있으면 다시 묻지 말고 바로 활용하세요.**
+
+**참고 템플릿:**
 {context}"""),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{question}")
@@ -198,7 +223,7 @@ def create_llm():
     """LLM 모델을 초기화합니다."""
     print("LLM 모델 초기화 중...")
     llm = ChatOpenAI(
-        openai_api_key=api_key,
+        api_key=api_key,
         model="gpt-4o-mini",
         temperature=0.1
     )
@@ -212,10 +237,10 @@ class FraudRAGAssistant:
     """중고거래 사기 상담 RAG 어시스턴트 (멀티턴 대화 지원)"""
 
     def __init__(self, counseling_path: str = "chroma_db_counseling",
-                 form_path: str = "chroma_db_form",
+                 templates_dir: str = "data/legal_info/templates",
                  max_history: int = 10, final_k: int = 5, fetch_k: int = 15):
         """
-        RAG 어시스턴트 초기화 (상담용 + 서식작성용 이중 벡터 저장소)
+        RAG 어시스턴트 초기화 (상담용 벡터 저장소 + 서식 템플릿)
         """
         print("=== 중고거래 사기 상담 RAG 시스템 초기화 ===")
 
@@ -223,14 +248,13 @@ class FraudRAGAssistant:
         self.counseling_store = load_vectorstore(counseling_path)
         self.counseling_retriever = setup_retriever(self.counseling_store, k=final_k, fetch_k=fetch_k)
 
-        # 서식작성용 벡터 저장소
-        self.form_store = load_vectorstore(form_path)
-        self.form_retriever = setup_retriever(self.form_store, k=final_k, fetch_k=fetch_k)
-
         self.reranker = setup_reranker()
         self.final_k = final_k
 
-        # 두 가지 프롬프트/체인
+        # 서식 템플릿 로드 (JSON 파일)
+        self.templates = self._load_form_templates(templates_dir)
+
+        # 프롬프트/체인
         self.counseling_prompt = create_prompt_template()
         self.form_prompt = create_form_writing_prompt()
         self.llm = create_llm()
@@ -240,8 +264,30 @@ class FraudRAGAssistant:
         # 대화 기록 저장
         self.chat_history = []
         self.max_history = max_history
+        self.last_intent = None
+        self.last_form_type = None  # 서식 종류도 기억
 
         print("🎉 RAG 시스템 초기화 완료!\n")
+
+    def _load_form_templates(self, templates_dir: str) -> dict:
+        """서식 JSON 템플릿들을 로드합니다."""
+        print("서식 템플릿 로드 중...")
+        templates = {}
+        mapping = {
+            "civil_complaint.json": "civil",
+            "criminal_accusation.json": "accusation",
+            "certified_content.json": "certified_mail",
+            "fact_inquiry.json": "fact_inquiry",
+            "financial_info_order.json": "financial_info",
+        }
+        for filename, key in mapping.items():
+            path = os.path.join(templates_dir, filename)
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    templates[key] = json.load(f)
+                print(f"  ✅ {filename} 로드 완료")
+        print(f"✅ 서식 템플릿 {len(templates)}개 로드 완료!")
+        return templates
 
     def _build_search_query(self, question: str) -> str:
         """
@@ -286,36 +332,23 @@ class FraudRAGAssistant:
         print(f"💬 질문: {question}")
 
         try:
-            # 1. 의도 분류
+            # 1. 의도 분류 (이전 턴이 form_writing이면 후속 질문도 유지)
             intent = classify_intent(question)
-            print(f"📌 의도 분류: {intent}")
-
-            # 2. 의도에 따라 retriever/chain 선택
-            if intent == "form_writing":
-                retriever = self.form_retriever
-                chain = self.form_chain
+            if intent == "counseling" and self.last_intent == "form_writing":
+                intent = "form_writing"
+                print(f"📌 의도 분류: {intent} (이전 턴 유지)")
             else:
-                retriever = self.counseling_retriever
-                chain = self.counseling_chain
+                print(f"📌 의도 분류: {intent}")
 
-            # 3. 대화 맥락 반영하여 검색 쿼리 생성
-            search_query = self._build_search_query(question)
+            if intent == "form_writing":
+                answer = self._handle_form_writing(question)
+            else:
+                answer = self._handle_counseling(question)
 
-            # 4. 관련 문서 검색 (넓게) → reranking (정밀하게)
-            docs = retriever.invoke(search_query)
-            docs = rerank_documents(self.reranker, search_query, docs, top_k=self.final_k)
-            context = format_docs(docs)
-
-            # 5. 대화 기록 + 컨텍스트로 답변 생성
-            answer = chain.invoke({
-                "context": context,
-                "chat_history": self.chat_history,
-                "question": question
-            })
-
-            # 6. 대화 기록에 추가
+            # 대화 기록에 추가
             self.chat_history.append(HumanMessage(content=question))
             self.chat_history.append(AIMessage(content=answer))
+            self.last_intent = intent
 
             if len(self.chat_history) > self.max_history * 2:
                 self.chat_history = self.chat_history[-self.max_history * 2:]
@@ -328,19 +361,76 @@ class FraudRAGAssistant:
             print(f"❌ {error_msg}")
             return error_msg
 
+    def _handle_counseling(self, question: str) -> str:
+        """상담 질문 처리 (벡터 검색 + reranking)"""
+        search_query = self._build_search_query(question)
+        docs = self.counseling_retriever.invoke(search_query)
+        docs = rerank_documents(self.reranker, search_query, docs, top_k=self.final_k)
+        context = format_docs(docs)
+
+        return self.counseling_chain.invoke({
+            "context": context,
+            "chat_history": self.chat_history,
+            "question": question
+        })
+
+    def _handle_form_writing(self, question: str) -> str:
+        """서식작성 질문 처리 (템플릿 기반)"""
+        # 서식 종류 판별 (이전 턴 유지 또는 새로 판별)
+        form_type = classify_form_type(question)
+        if form_type == "unknown" and self.last_form_type:
+            form_type = self.last_form_type
+            print(f"📋 서식 종류: {form_type} (이전 턴 유지)")
+        else:
+            print(f"📋 서식 종류: {form_type}")
+
+        # 서식 종류를 모르면 선택지 제시
+        if form_type == "unknown":
+            self.last_form_type = None
+            return ("어떤 서식을 작성하시겠어요?\n\n"
+                    "1. **민사소장** — 돈을 돌려받기 위한 소송 서류\n"
+                    "2. **형사고소장** — 사기꾼 처벌을 위한 고소 서류\n"
+                    "3. **내용증명** — 환불 요구를 공식 통보하는 서류\n"
+                    "4. **사실조회신청서** — 통신사에 전화번호 명의자 조회\n"
+                    "5. **금융거래정보제출명령신청서** — 은행에 계좌 예금주 조회\n\n"
+                    "원하시는 서식을 말씀해주세요.")
+
+        template = self.templates.get(form_type)
+        if not template:
+            return "해당 서식 템플릿을 찾을 수 없습니다."
+
+        self.last_form_type = form_type
+        context = json.dumps(template, ensure_ascii=False, indent=2)
+
+        return self.form_chain.invoke({
+            "context": context,
+            "chat_history": self.chat_history,
+            "question": question
+        })
+
     def clear_history(self):
         """대화 기록을 초기화합니다."""
         self.chat_history = []
+        self.last_intent = None
+        self.last_form_type = None
         print("🗑️ 대화 기록이 초기화되었습니다.")
 
     def search_documents(self, query: str, k: int = 3, intent: str = None):
-        """질문과 관련된 문서들을 검색합니다. (디버깅/확인용)"""
+        """질문과 관련된 문서들을 검색합니다. (디버깅/확인용, 상담용만)"""
         if intent is None:
             intent = classify_intent(query)
-        retriever = self.form_retriever if intent == "form_writing" else self.counseling_retriever
+
+        if intent == "form_writing":
+            form_type = classify_form_type(query)
+            template = self.templates.get(form_type)
+            if template:
+                print(f"📋 서식 템플릿: {template['template_name']}")
+            else:
+                print("📋 서식 종류를 특정할 수 없습니다.")
+            return []
 
         print(f"🔍 문서 검색 ({intent}): {query}")
-        docs = retriever.invoke(query)
+        docs = self.counseling_retriever.invoke(query)
 
         print(f"📄 검색된 문서 {len(docs)}개:")
         for i, doc in enumerate(docs, 1):
@@ -376,9 +466,20 @@ def main():
         # 대화형 모드
         print("\n=== 대화형 모드 시작 ===")
         print("질문을 입력하세요. ('quit' 입력시 종료, '초기화' 입력시 대화 초기화)")
+        print("여러 줄 입력: 빈 줄(Enter 두 번)로 전송\n")
 
         while True:
-            question = input("\n💭 질문: ").strip()
+            lines = []
+            first_line = input("💭 질문: ").strip()
+            if first_line:
+                lines.append(first_line)
+            # 추가 줄 입력 (빈 줄이면 전송)
+            while True:
+                line = input("  ... : ").strip()
+                if not line:
+                    break
+                lines.append(line)
+            question = " ".join(lines)
 
             if question.lower() in ['quit', 'exit', '종료']:
                 print("👋 상담을 종료합니다.")
