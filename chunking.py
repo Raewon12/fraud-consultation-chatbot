@@ -51,6 +51,21 @@ def load_fraud_cases_documents(path: str):
             f"태그: {', '.join(case['tags'])}\n"
         )
 
+        # 실제 소송 경험이 있는 사례는 추가 텍스트 생성
+        if "lawsuit_summary" in case:
+            ls = case["lawsuit_summary"]
+            text += f"\n실제 소송 경험:\n"
+            text += f"법원: {ls.get('court', '')}\n"
+            text += f"사건유형: {ls.get('case_type', '')}\n"
+            text += f"결과: {ls.get('result', '')} — {ls.get('result_reason', '')}\n"
+            text += f"소요기간: 약 {ls.get('duration_months', '?')}개월\n"
+            if "parallel_proceedings" in ls:
+                text += f"병행절차: {ls['parallel_proceedings']}\n"
+            if "key_lessons" in ls:
+                text += "핵심 교훈:\n"
+                for lesson in ls["key_lessons"]:
+                    text += f"- {lesson}\n"
+
         metadata = {
             "source": "fraud_cases",
             "filename": os.path.basename(path),
@@ -60,9 +75,10 @@ def load_fraud_cases_documents(path: str):
             "fraud_type": case.get("fraud_type"),
             "amount_krw": case.get("amount_krw"),
             "tags": ", ".join(case.get("tags", [])),  # 배열을 문자열로 변환
-            "document_type": "fraud_case"
+            "document_type": "fraud_case",
+            "has_lawsuit_record": "lawsuit_summary" in case
         }
-        
+
         docs.append(Document(page_content=text, metadata=metadata))
 
     return docs
@@ -710,7 +726,35 @@ def load_faq_documents(path: str):
     return docs
 
 # =====================================================
-# 5. 법률 서식 템플릿 문서 로딩
+# 5. 실무 지식 문서 로딩
+# =====================================================
+def load_practical_insights(path: str):
+    """실제 소송기록에서 추출한 실무 지식 JSON을 Document로 변환"""
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    docs = []
+    for insight in data.get("practical_insights", []):
+        text = f"""실무 지식: {insight['title']}
+카테고리: {insight['category']}
+
+{insight['content']}
+
+실무 팁: {insight['practical_tip']}
+"""
+        metadata = {
+            "source": "practical_insights",
+            "filename": os.path.basename(path),
+            "document_type": "practical_insight",
+            "insight_id": insight["insight_id"],
+            "category": insight["category"],
+        }
+        docs.append(Document(page_content=text, metadata=metadata))
+    return docs
+
+
+# =====================================================
+# 6. 법률 서식 템플릿 문서 로딩
 # =====================================================
 def load_template_documents(path: str):
     """법률 서식 템플릿 텍스트 파일을 로드하여 Document 객체로 변환"""
@@ -748,7 +792,7 @@ def load_template_documents(path: str):
     return docs
 
 # =====================================================
-# 6. 전체 데이터 로딩 및 처리 파이프라인
+# 7. 전체 데이터 로딩 및 처리 파이프라인
 # =====================================================
 def load_all_documents(data_dir: str = "data"):
     """모든 데이터를 로드하여 Document 객체 리스트로 반환"""
@@ -788,7 +832,13 @@ def load_all_documents(data_dir: str = "data"):
                 print(f"FAQ 로딩: {faq_path}")
                 all_docs.extend(load_faq_documents(faq_path))
 
-    # 5. 법률 서식 템플릿 로딩
+    # 5. 실무 지식 로딩
+    insights_path = os.path.join(data_dir, "legal_info", "practical_insights.json")
+    if os.path.exists(insights_path):
+        print(f"실무 지식 로딩: {insights_path}")
+        all_docs.extend(load_practical_insights(insights_path))
+
+    # 6. 법률 서식 템플릿 로딩
     templates_dir = os.path.join(data_dir, "legal_info", "templates")
     if os.path.exists(templates_dir):
         for filename in os.listdir(templates_dir):

@@ -28,3 +28,6 @@ aihub_raw/
 data/aihub_legal/
 *.zip.part0
 06.계약_외_법률_문서_서식_데이터*/
+# 소송기록 원본 PDF (개인정보 포함)
+scripts/*.pdf
+*.pdf
