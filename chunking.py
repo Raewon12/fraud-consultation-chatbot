@@ -741,6 +741,8 @@ def load_practical_insights(path: str):
 {insight['content']}
 
 실무 팁: {insight['practical_tip']}
+
+관련 검색어: {', '.join(insight.get('related_keywords', []))}
 """
         metadata = {
             "source": "practical_insights",
