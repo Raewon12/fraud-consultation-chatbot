@@ -23,7 +23,7 @@
       "fields": [
         {"field_id": "accused_account", "label": "계좌번호", "placeholder": "[카카오뱅크 3333-01-1234567]", "required": true},
         {"field_id": "accused_phone", "label": "전화번호", "placeholder": "[010-9876-5432]", "required": false},
-        {"field_id": "accused_nickname", "label": "플랫폼 닉네임", "placeholder": "[당근마켓 '급처분']", "required": false},
+        {"field_id": "accused_nickname", "label": "플랫폼 닉네임", "placeholder": "[당근마켓 '급처분']", "required": true, "note": "피고소인 특정에 중요한 단서"},
         {"field_id": "accused_profile", "label": "프로필 번호", "placeholder": "[#12345678]", "required": false}
       ]
     },
@@ -50,7 +50,10 @@
     },
     {
       "title": "증거 자료",
-      "template_text": "증 거 자 료\n\n증거 제1호: 거래 대화 내용 (채팅 전체 내역)\n증거 제2호: 판매글 캡처 (URL 포함)\n증거 제3호: 송금 내역서\n증거 제4호: 피고소인 프로필/연락처 정보\n증거 제5호: 연락 시도 기록 (통화 내역, 메시지 읽음 확인)\n증거 제6호: 기타 (더치트 조회 결과 등)"
+      "template_text": "증 거 자 료\n\n[사용자가 실제로 확보한 증거만 기재하세요. 아래는 예시이며, 대화에서 언급된 증거를 반영하여 작성합니다.]\n\n증거 제1호: 거래 대화 내용 (채팅 전체 내역)\n증거 제2호: 판매글 캡처 (URL 포함)\n증거 제3호: 송금 내역서\n증거 제4호: 피고소인 프로필/연락처 정보\n증거 제5호: 연락 시도 기록 (통화 내역, 메시지 읽음 확인)\n증거 제6호: 기타 (더치트 조회 결과 등)",
+      "fields": [
+        {"field_id": "evidence_list", "label": "확보한 증거 목록", "placeholder": "[거래 대화 캡처, 송금 내역서, 판매글 캡처 등]", "required": false, "note": "실제 확보한 증거만 기재하면 자동 반영됩니다"}
+      ]
     },
     {
       "title": "관련 법조",

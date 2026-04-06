@@ -7,3 +7,6 @@ chromadb
 openai
 python-dotenv
 sentence-transformers
+fastapi
+uvicorn
+sse-starlette
